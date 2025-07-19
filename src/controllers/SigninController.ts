@@ -1,9 +1,20 @@
 import { access } from "fs";
 import { HttpRequest, HttpResponse } from "../types/Http";
-import { ok } from "../utils/http";
+import { badRequest, ok } from "../utils/http";
+import {z} from 'zod'
 
+
+const schema = z.object({
+  email: z.email(),
+  password: z.string().min(8)
+})
 export class SignInController{
-  static async  handle(request:HttpRequest): Promise<HttpResponse> {
-   return ok({accessToken:'ola'})
+  static async  handle({body}:HttpRequest): Promise<HttpResponse> {
+    const {success,error,data} = schema.safeParse(body);
+    if(!success){
+      return badRequest({errors:error.issues})
+    }
+
+   return ok({data})
   }
 }
