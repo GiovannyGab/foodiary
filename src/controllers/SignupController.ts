@@ -1,7 +1,11 @@
 import { access } from "fs";
 import { HttpRequest, HttpResponse } from "../types/Http";
-import { badRequest, created } from "../utils/http";
+import { badRequest, conflict, created } from "../utils/http";
 import { z } from "zod";
+import { db } from "../db";
+import { usersTable } from "../db/schema";
+import { and, eq } from "drizzle-orm";
+import { hash } from "bcryptjs";
 
 const schema = z.object({
   goal: z.enum(["lose", "maintain", "gain"]),
@@ -23,6 +27,29 @@ export class SignUpController {
     if (!success) {
       return badRequest({ errors: error.issues });
     }
-    return created({ data });
+    const userAlredyExists = await db.query.usersTable.findFirst(
+      {
+        columns:{
+          email:true,
+        },
+        where: eq(usersTable.email, data.account.email)
+      }
+    )
+    if(userAlredyExists){
+      return conflict({error:'This email is alredy in use'})
+    }
+    const {account,...rest} = data
+    const hashedPassword = await hash(account.password,12)
+   const [user] =  await db.insert(usersTable).values({
+      ...rest,
+      ...account,
+      password: hashedPassword,
+      calories:0,
+      carbohydrates:0,
+      proteins:0,
+      fats:0
+    })
+    .returning({id:usersTable.id})
+    return created({ userId:user.id });
   }
 }
