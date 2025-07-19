@@ -6,6 +6,7 @@ import { db } from "../db";
 import { usersTable } from "../db/schema";
 import { and, eq } from "drizzle-orm";
 import { hash } from "bcryptjs";
+import { calculateGoals } from "../lib/calculateGoals";
 
 const schema = z.object({
   goal: z.enum(["lose", "maintain", "gain"]),
@@ -38,16 +39,24 @@ export class SignUpController {
     if(userAlredyExists){
       return conflict({error:'This email is alredy in use'})
     }
+
+   
     const {account,...rest} = data
     const hashedPassword = await hash(account.password,12)
+
+       const goals = calculateGoals({
+          activityLevel: rest.activityLevel,
+          birthDate: new Date(rest.birthDate),
+          gender: rest.gender,
+          weight: rest.weight,
+          height: rest.height,
+          goal: rest.goal,
+        })
    const [user] =  await db.insert(usersTable).values({
       ...rest,
       ...account,
       password: hashedPassword,
-      calories:0,
-      carbohydrates:0,
-      proteins:0,
-      fats:0
+      ...goals
     })
     .returning({id:usersTable.id})
     return created({ userId:user.id });

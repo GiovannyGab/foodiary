@@ -8,6 +8,7 @@ import { db } from "../db";
 import { compare } from "bcryptjs";
 import { sign } from "jsonwebtoken";
 import { signAccessToken } from "../lib/jwt";
+import { calculateGoals } from "../lib/calculateGoals";
 
 const schema = z.object({
   email: z.email(),
@@ -31,7 +32,7 @@ export class SignInController {
     if (!user) {
       return unautorizhed({ error: "Invalid Credentials" });
     }
-
+  
     const isPasswordValid = await compare(data.password, user.password);
     if (!isPasswordValid) {
       return unautorizhed({ error: "Invalid Credentials" });
