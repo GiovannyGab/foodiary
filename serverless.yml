@@ -12,7 +12,14 @@ provider:
   environment:
     DATABASE_URL: ${env:DATABASE_URL}
     JWT_SECRET: ${env:JWT_SECRET}
-
+    BUCKET_NAME: !Ref UploadsBucket
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+          Resource: !Sub "${UploadsBucket.Arn}/*"
 package:
   individually: true
 
@@ -52,3 +59,24 @@ functions:
       - httpApi:
           path: /meals
           method: GET
+  getMeals:
+    handler: src/functions/getMealById.handler
+    events:
+      - httpApi:
+          path: /meals/{mealId}
+          method: GET
+  fileUploadedEvent:
+    handler: src/functions/fileUploadedEvent.handler
+    events:
+      - s3:
+          bucket: !Ref UploadsBucket
+          event: s3:ObjectCreated:*
+          existing: true
+          forceDeploy: true
+
+resources:
+  Resources:
+    UploadsBucket:
+      Type: "AWS::S3::Bucket"
+      Properties:
+        BucketName: "foodiary-giovanny"
